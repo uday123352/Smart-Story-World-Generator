@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Login — WorldForge AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  /* ── Login-specific animated BG ── */
+  .auth-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 30% 50%, rgba(139,26,26,0.12), transparent),
+      radial-gradient(ellipse 60% 60% at 80% 30%, rgba(107,33,168,0.12), transparent),
+      radial-gradient(ellipse 80% 80% at 50% 80%, rgba(8,145,178,0.06), transparent),
+      var(--bg-void);
+  }
+  .auth-runes {
+    position: fixed; inset: 0; z-index: 0;
+    overflow: hidden; pointer-events: none;
+  }
+  .rune {
+    position: absolute;
+    font-size: 1.5rem;
+    color: rgba(201,162,39,0.07);
+    animation: runeFloat linear infinite;
+    user-select: none;
+  }
+  @keyframes runeFloat {
+    0%   { transform: translateY(100vh) rotate(0deg);   opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { transform: translateY(-20vh) rotate(360deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+<div class="auth-bg"></div>
+<div class="auth-runes" id="runes-container"></div>
+
+<!-- Header -->
+<header id="main-header">
+  <nav class="nav-container">
+    <a href="/" class="logo">
+      <span class="logo-icon">⚔</span>
+      <span class="logo-text">WorldForge<span class="logo-ai">AI</span></span>
+    </a>
+    <div class="nav-cta">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="toggle-icon">☀</span>
+        <span class="toggle-label">Light</span>
+      </button>
+      <a href="/signup" class="btn-primary">Create Account</a>
+    </div>
+  </nav>
+</header>
+
+<!-- Login Card -->
+<main class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div style="font-size:2.5rem">⚔</div>
+    </div>
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-sub">Enter your realm once more, world-builder.</p>
+
+    <!-- Server-side errors -->
+    <ul class="errors-list" id="errors-list"></ul>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="identifier">Email or Username</label>
+        <input type="text" id="identifier" name="identifier" class="form-input"
+               placeholder="archmage@realm.com" autocomplete="username" required/>
+        <div class="form-error" id="identifier-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-input"
+               placeholder="••••••••" autocomplete="current-password" required/>
+        <div class="form-error" id="password-error"></div>
+      </div>
+
+      <div class="form-checkbox-row">
+        <label>
+          <input type="checkbox" id="remember" name="remember"/>
+          Remember me
+        </label>
+        <a href="#" onclick="showToast('Password reset coming soon!');return false;">
+          Forgot password?
+        </a>
+      </div>
+
+      <button type="submit" class="btn-auth" id="login-btn">
+        Enter the Realm
+      </button>
+    </form>
+
+    <div class="auth-divider">✦ or ✦</div>
+
+    <div class="auth-switch">
+      Don't have an account?
+      <a href="/signup">Create one free →</a>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+// ── Floating runes ────────────────────────────────────────────────────────────
+(function spawnRunes() {
+  const runes   = ['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ','ᚺ','ᚾ','ᛁ','ᛃ','ᛇ','ᛈ','ᛉ','ᛊ','ᛏ','ᛒ','ᛖ','ᛗ','ᛚ','ᛜ','ᛞ','ᛟ'];
+  const container = document.getElementById('runes-container');
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement('div');
+    el.className = 'rune';
+    el.textContent = runes[Math.floor(Math.random() * runes.length)];
+    el.style.left     = Math.random() * 100 + 'vw';
+    el.style.animationDuration  = (15 + Math.random() * 20) + 's';
+    el.style.animationDelay     = -(Math.random() * 20)     + 's';
+    el.style.fontSize = (1 + Math.random() * 2) + 'rem';
+    container.appendChild(el);
+  }
+})();
+
+// ── Login Form ────────────────────────────────────────────────────────────────
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const identifier = document.getElementById('identifier').value.trim();
+  const password   = document.getElementById('password').value;
+  const remember   = document.getElementById('remember').checked;
+  const btn        = document.getElementById('login-btn');
+  const errList    = document.getElementById('errors-list');
+
+  // Clear previous errors
+  errList.innerHTML = '';
+  errList.classList.remove('visible');
+  document.querySelectorAll('.form-input').forEach(i => i.classList.remove('error'));
+
+  // Basic validation
+  let valid = true;
+  if (!identifier) {
+    document.getElementById('identifier').classList.add('error');
+    document.getElementById('identifier-error').textContent = 'This field is required.';
+    document.getElementById('identifier-error').classList.add('visible');
+    valid = false;
+  }
+  if (!password) {
+    document.getElementById('password').classList.add('error');
+    document.getElementById('password-error').textContent = 'This field is required.';
+    document.getElementById('password-error').classList.add('visible');
+    valid = false;
+  }
+  if (!valid) return;
+
+  // Submit
+  btn.disabled = true;
+  btn.textContent = 'Entering realm...';
+  btn.classList.add('btn-auth-loading');
+
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password, remember })
+    });
+    const d = await r.json();
+
+    if (d.success) {
+      showToast('✦ Welcome back, ' + d.user.username + '!');
+      if (typeof clearAuthCache === 'function') clearAuthCache();
+      setTimeout(() => window.location.href = '/dashboard', 800);
+    } else {
+      errList.innerHTML = (d.errors || ['Invalid credentials.']).map(
+        e => `<li>${e}</li>`
+      ).join('');
+      errList.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = 'Enter the Realm';
+      btn.classList.remove('btn-auth-loading');
+    }
+  } catch (err) {
+    errList.innerHTML = '<li>Server error. Please try again.</li>';
+    errList.classList.add('visible');
+    btn.disabled = false;
+    btn.textContent = 'Enter the Realm';
+    btn.classList.remove('btn-auth-loading');
+  }
+});
+
+// Redirect if already logged in — reuses the cached fetch from app.js (no double call)
+(async function() {
+  if (typeof redirectIfAuthenticated === 'function') {
+    await redirectIfAuthenticated('/dashboard');
+  }
+})();
+</script>
+</body>
+</html>

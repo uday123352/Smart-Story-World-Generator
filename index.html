@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Story World Generator — Create Infinite Fantasy Worlds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ── Particle Canvas ──────────────────────────────────────────────── -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- ── Sticky Header ────────────────────────────────────────────────── -->
+<header id="main-header">
+  <nav class="nav-container">
+    <a href="/" class="logo">
+      <span class="logo-icon">⚔</span>
+      <span class="logo-text">WorldForge<span class="logo-ai">AI</span></span>
+    </a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#home"     class="nav-link">Home</a></li>
+      <li><a href="#features" class="nav-link">Features</a></li>
+      <li><a href="#explore"  class="nav-link">Explore Worlds</a></li>
+      <li><a href="#generator"class="nav-link">AI Generator</a></li>
+      <li><a href="#pricing"  class="nav-link">Pricing</a></li>
+      <li><a href="#about"    class="nav-link">About</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="toggle-icon">☀</span>
+        <span class="toggle-label">Light</span>
+      </button>
+      <a href="/login"  class="btn-ghost">Login</a>
+      <a href="/signup" class="btn-primary">Sign Up</a>
+    </div>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+</header>
+
+<!-- ── Hero Section ──────────────────────────────────────────────────── -->
+<section class="hero" id="home">
+  <div class="hero-bg">
+    <div class="floating-island island-1"></div>
+    <div class="floating-island island-2"></div>
+    <div class="floating-island island-3"></div>
+    <div class="dragon dragon-1">🐉</div>
+    <div class="dragon dragon-2">🐲</div>
+    <div class="magic-orb orb-1"></div>
+    <div class="magic-orb orb-2"></div>
+    <div class="magic-orb orb-3"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">✦ Powered by Advanced AI ✦</div>
+    <h1 class="hero-title">
+      Create <span class="gradient-text">Infinite</span><br/>
+      Fantasy Worlds with AI
+    </h1>
+    <p class="hero-subtitle">
+      Generate kingdoms, stories, maps, heroes, and adventures instantly.<br/>
+      One idea. Infinite universes.
+    </p>
+
+    <!-- Quick Demo Generator -->
+    <div class="hero-generator">
+      <div class="generator-label">✦ Try it now ✦</div>
+      <div class="generator-input-row">
+        <input type="text" id="hero-idea" class="generator-input"
+               placeholder="A floating kingdom ruled by ancient dragons..."
+               maxlength="200"/>
+        <button class="btn-generate" id="hero-generate-btn" onclick="quickGenerate()">
+          <span class="btn-icon">⚡</span>
+          <span>Generate World</span>
+        </button>
+      </div>
+      <div class="idea-pills">
+        <button class="idea-pill" onclick="setIdea(this)">Cyberpunk AI city</button>
+        <button class="idea-pill" onclick="setIdea(this)">Cursed pirate oceans</button>
+        <button class="idea-pill" onclick="setIdea(this)">Post-apocalyptic desert empire</button>
+        <button class="idea-pill" onclick="setIdea(this)">Ancient magical forest</button>
+      </div>
+    </div>
+
+    <div class="hero-cta-row">
+      <a href="/signup" class="btn-hero-primary">
+        <span>🌍</span> Start Creating Free
+      </a>
+      <a href="#features" class="btn-hero-ghost">
+        <span>▶</span> Explore Features
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">50K+</span><span class="stat-label">Worlds Created</span></div>
+      <div class="stat-divider">✦</div>
+      <div class="stat"><span class="stat-num">200K+</span><span class="stat-label">Characters</span></div>
+      <div class="stat-divider">✦</div>
+      <div class="stat"><span class="stat-num">1M+</span><span class="stat-label">Story Chapters</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Scrolling Marquee ──────────────────────────────────────────────── -->
+<div class="marquee-strip">
+  <div class="marquee-track">
+    <span>⚔ Kingdoms</span><span>🐉 Dragons</span><span>🗺 Fantasy Maps</span>
+    <span>⚡ Magic Systems</span><span>🏰 Castles</span><span>🌙 Dark Lore</span>
+    <span>💀 Villains</span><span>🗡 Epic Quests</span><span>🔮 Ancient Prophecies</span>
+    <span>⚔ Kingdoms</span><span>🐉 Dragons</span><span>🗺 Fantasy Maps</span>
+    <span>⚡ Magic Systems</span><span>🏰 Castles</span><span>🌙 Dark Lore</span>
+    <span>💀 Villains</span><span>🗡 Epic Quests</span><span>🔮 Ancient Prophecies</span>
+  </div>
+</div>
+
+<!-- ── Features Section ──────────────────────────────────────────────── -->
+<section class="features-section" id="features">
+  <div class="section-header">
+    <div class="section-badge">✦ What WorldForge AI Creates ✦</div>
+    <h2 class="section-title">Eight Pillars of World Creation</h2>
+    <p class="section-sub">Every universe deserves to be complete. Our AI builds every layer.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card" data-delay="0">
+      <div class="feature-icon">📖</div>
+      <h3>AI Story Generator</h3>
+      <p>Cinematic chapters, plot twists, dialogues, and branching narratives generated from a single idea.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="100">
+      <div class="feature-icon">👤</div>
+      <h3>Character Creator</h3>
+      <p>Heroes, villains, sages, and warriors with rich backstories, powers, and relationship webs.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="200">
+      <div class="feature-icon">🏰</div>
+      <h3>Kingdom Builder</h3>
+      <p>Full kingdoms with rulers, armies, economies, politics, and detailed cultural lore.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="300">
+      <div class="feature-icon">🗺</div>
+      <h3>AI Map Generator</h3>
+      <p>Interactive procedural fantasy maps with mountains, rivers, castles, and hidden zones.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="400">
+      <div class="feature-icon">🐉</div>
+      <h3>Creature Generator</h3>
+      <p>Unique mythical beasts, monsters, and creatures with powers, habitats, and ancient lore.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="500">
+      <div class="feature-icon">⚡</div>
+      <h3>Magic System Generator</h3>
+      <p>Complete magic systems with rules, limitations, ancient origins, and legendary spells.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="600">
+      <div class="feature-icon">🗡</div>
+      <h3>Quest Generator</h3>
+      <p>Epic missions, dungeon crawls, and hero journeys with rewards and dynamic outcomes.</p>
+      <div class="feature-glow"></div>
+    </div>
+    <div class="feature-card" data-delay="700">
+      <div class="feature-icon">🔮</div>
+      <h3>Interactive Lore Engine</h3>
+      <p>Living histories, timelines, prophecies, religions, and political systems that feel real.</p>
+      <div class="feature-glow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Community Worlds ───────────────────────────────────────────────── -->
+<section class="explore-section" id="explore">
+  <div class="section-header">
+    <div class="section-badge">✦ Community Creations ✦</div>
+    <h2 class="section-title">Explore Worlds</h2>
+    <p class="section-sub">Discover universes built by our community of world-builders.</p>
+  </div>
+  <div class="worlds-gallery" id="community-gallery">
+    <!-- Populated by JS -->
+    <div class="world-card-placeholder">Loading worlds...</div>
+  </div>
+  <div class="explore-cta">
+    <a href="/signup" class="btn-primary btn-lg">Create Your World →</a>
+  </div>
+</section>
+
+<!-- ── Generator Promo Section ────────────────────────────────────────── -->
+<section class="generator-promo" id="generator">
+  <div class="promo-content">
+    <div class="promo-text">
+      <div class="section-badge">✦ The AI Engine ✦</div>
+      <h2>From One Sentence<br/><span class="gradient-text">To an Entire Universe</span></h2>
+      <p>WorldForge AI uses advanced language models to generate cohesive, internally consistent worlds with thousands of details — all from your single idea.</p>
+      <ul class="promo-list">
+        <li>✦ Complete world lore & history</li>
+        <li>✦ Dynamic kingdoms & political intrigue</li>
+        <li>✦ Rich characters with relationships</li>
+        <li>✦ Procedural fantasy maps</li>
+        <li>✦ Legendary weapons & magic systems</li>
+        <li>✦ Cinematic story chapters</li>
+      </ul>
+      <a href="/signup" class="btn-primary btn-lg">Start Building Free →</a>
+    </div>
+    <div class="promo-visual">
+      <div class="world-preview-card">
+        <div class="preview-header">
+          <span class="preview-dot red"></span>
+          <span class="preview-dot yellow"></span>
+          <span class="preview-dot green"></span>
+          <span class="preview-title">WorldForge AI — Generating...</span>
+        </div>
+        <div class="preview-body" id="preview-typewriter">
+          <div class="type-line active" data-text="World: Aethermoor, the Sky Realm"></div>
+          <div class="type-line" data-text="Kingdom: The Cloudborne Empire"></div>
+          <div class="type-line" data-text="Hero: Kael the Stormcaller"></div>
+          <div class="type-line" data-text="Villain: The Shadow Architect"></div>
+          <div class="type-line" data-text="Magic: Storm-weaving arts"></div>
+          <div class="type-line" data-text="Quest: Seal the Sky Rift..."></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pricing Section ────────────────────────────────────────────────── -->
+<section class="pricing-section" id="pricing">
+  <div class="section-header">
+    <div class="section-badge">✦ Choose Your Realm ✦</div>
+    <h2 class="section-title">Simple Pricing</h2>
+    <p class="section-sub">Start free, upgrade when you need infinite power.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="pricing-tier">Wanderer</div>
+      <div class="pricing-price"><span class="price-amount">Free</span></div>
+      <ul class="pricing-features">
+        <li>✦ 3 worlds per month</li>
+        <li>✦ Basic character generation</li>
+        <li>✦ Simple story chapters</li>
+        <li>✦ Community access</li>
+      </ul>
+      <a href="/signup" class="btn-ghost btn-lg">Begin Journey</a>
+    </div>
+    <div class="pricing-card featured">
+      <div class="pricing-badge">Most Popular</div>
+      <div class="pricing-tier">Archmage</div>
+      <div class="pricing-price"><span class="price-amount">$12</span><span class="price-period">/mo</span></div>
+      <ul class="pricing-features">
+        <li>✦ Unlimited worlds</li>
+        <li>✦ Advanced AI characters</li>
+        <li>✦ Full story engine</li>
+        <li>✦ Fantasy map downloads</li>
+        <li>✦ PDF export</li>
+        <li>✦ Priority generation</li>
+      </ul>
+      <a href="/signup" class="btn-primary btn-lg">Ascend Now</a>
+    </div>
+    <div class="pricing-card">
+      <div class="pricing-tier">Godforge</div>
+      <div class="pricing-price"><span class="price-amount">$29</span><span class="price-period">/mo</span></div>
+      <ul class="pricing-features">
+        <li>✦ Everything in Archmage</li>
+        <li>✦ API access</li>
+        <li>✦ Team collaboration</li>
+        <li>✦ White-label export</li>
+        <li>✦ Custom AI training</li>
+      </ul>
+      <a href="/signup" class="btn-ghost btn-lg">Unlock All</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── About Section ──────────────────────────────────────────────────── -->
+<section class="about-section" id="about">
+  <div class="about-content">
+    <div class="section-badge">✦ Our Mission ✦</div>
+    <h2 class="section-title">Forging Stories, One World at a Time</h2>
+    <p class="about-text">WorldForge AI was born from a simple belief: every person has a universe inside them waiting to be told. We built the most powerful AI storytelling engine ever created so writers, game masters, and dreamers can bring those worlds to life instantly.</p>
+    <p class="about-text">Our AI doesn't just generate text — it builds <em>living, breathing universes</em> with internal consistency, rich characters, and stories that surprise even their creators.</p>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="footer-glow"></div>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="/" class="logo">
+        <span class="logo-icon">⚔</span>
+        <span class="logo-text">WorldForge<span class="logo-ai">AI</span></span>
+      </a>
+      <p>The ultimate AI-powered fantasy world creation platform. Generate infinite universes from a single idea.</p>
+      <div class="social-links">
+        <a href="#" class="social-link" aria-label="Twitter">𝕏</a>
+        <a href="#" class="social-link" aria-label="Discord">⚡</a>
+        <a href="#" class="social-link" aria-label="GitHub">⛙</a>
+        <a href="#" class="social-link" aria-label="YouTube">▶</a>
+      </div>
+    </div>
+    <div class="footer-links-group">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#explore">Gallery</a></li>
+        <li><a href="/dashboard">Dashboard</a></li>
+      </ul>
+    </div>
+    <div class="footer-links-group">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-links-group">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-newsletter">
+      <h4>✦ Join the Realm</h4>
+      <p>Get weekly AI world-building tips and new feature releases.</p>
+      <div class="newsletter-form">
+        <input type="email" class="newsletter-input" placeholder="your@email.com"/>
+        <button class="btn-primary" onclick="subscribeNewsletter()">Subscribe</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 WorldForge AI. All rights reserved. Built with ⚔ and artificial magic.</p>
+  </div>
+</footer>
+
+<!-- ── Quick Generate Modal ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="quick-modal" onclick="closeQuickModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeQuickModal()">✕</button>
+    <h2 class="modal-title">✦ Create Your World ✦</h2>
+    <p class="modal-sub">Sign in to generate your complete fantasy universe</p>
+    <div class="modal-cta-row">
+      <a href="/signup" class="btn-primary btn-lg">Create Free Account</a>
+      <a href="/login"  class="btn-ghost btn-lg">Login</a>
+    </div>
+    <div class="modal-preview" id="modal-preview">
+      <div class="modal-preview-line">⚡ Generating world name...</div>
+      <div class="modal-preview-line">🏰 Building kingdoms...</div>
+      <div class="modal-preview-line">👤 Creating characters...</div>
+      <div class="modal-preview-line">🗺 Drawing map...</div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+// ── Typewriter effect in promo section ──────────────────────────────────
+(function(){
+  const lines = document.querySelectorAll('.type-line');
+  let current = 0;
+
+  function typeLine(el) {
+    const text = el.dataset.text;
+    el.textContent = '';
+    el.classList.add('active');
+    let i = 0;
+    const iv = setInterval(() => {
+      el.textContent += text[i++];
+      if (i >= text.length) {
+        clearInterval(iv);
+        current++;
+        if (current < lines.length) setTimeout(() => typeLine(lines[current]), 400);
+        else setTimeout(() => { current = 0; lines.forEach(l => { l.textContent=''; l.classList.remove('active'); }); setTimeout(() => typeLine(lines[0]), 500); }, 2000);
+      }
+    }, 40);
+  }
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { observer.disconnect(); typeLine(lines[0]); } });
+  }, { threshold: 0.3 });
+  const promo = document.getElementById('preview-typewriter');
+  if (promo) observer.observe(promo);
+})();
+
+// ── Load community worlds ────────────────────────────────────────────────
+async function loadCommunityWorlds() {
+  try {
+    const r = await fetch('/api/worlds/community');
+    const d = await r.json();
+    const gallery = document.getElementById('community-gallery');
+    if (!d.worlds || d.worlds.length === 0) {
+      gallery.innerHTML = '<div class="world-card-placeholder">Be the first to create a world!</div>';
+      return;
+    }
+    gallery.innerHTML = d.worlds.slice(0,6).map(w => `
+      <div class="world-gallery-card" onclick="window.location='/dashboard'">
+        <div class="wgc-genre">${w.genre||'Fantasy'}</div>
+        <h3 class="wgc-name">${w.world_name}</h3>
+        <div class="wgc-meta">
+          <span>by ${w.username}</span>
+          <span>❤ ${w.likes}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('community-gallery').innerHTML =
+      '<div class="world-card-placeholder">Join to explore community worlds!</div>';
+  }
+}
+loadCommunityWorlds();
+
+function subscribeNewsletter() {
+  const inp = document.querySelector('.newsletter-input');
+  if (inp && inp.value) {
+    inp.value = '';
+    showToast('✦ You\'re in the realm! Thanks for subscribing.');
+  }
+}
+</script>
+</body>
+</html>

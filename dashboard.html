@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dashboard — WorldForge AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+/* ── Extra Dashboard Styles ── */
+.dash-section { margin-bottom: 3rem; }
+.dash-section-title {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dash-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-glass);
+}
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-style: italic;
+  background: var(--bg-glass2);
+  border: 1px dashed var(--border-glass);
+  border-radius: var(--radius-lg);
+}
+.empty-state p { margin-bottom: 1rem; }
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+.ai-history-item:hover { background: var(--bg-glass2); }
+.ai-hist-icon { font-size: 1.2rem; opacity: 0.7; }
+.ai-hist-prompt { font-size: 0.85rem; color: var(--text-secondary); flex: 1; }
+.ai-hist-time { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
+
+/* Loading overlay */
+.gen-loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,8,17,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 9000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2rem;
+}
+.gen-loading-overlay.active { display: flex; }
+.gen-loading-globe {
+  font-size: 5rem;
+  animation: globeSpin 3s linear infinite;
+  filter: drop-shadow(0 0 30px rgba(201,162,39,0.5));
+}
+@keyframes globeSpin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+.gen-loading-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--gold);
+  text-align: center;
+}
+.gen-loading-steps { display: flex; flex-direction: column; gap: 0.5rem; max-width: 380px; width: 100%; }
+.gen-step {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  transition: all 0.4s ease;
+}
+.gen-step.active  { background: rgba(201,162,39,0.1); color: var(--gold); border: 1px solid var(--border-gold); }
+.gen-step.done    { color: #28c840; }
+.gen-step-icon    { font-size: 1rem; }
+
+/* Quest cards */
+.quests-list { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
+.quest-item {
+  background: var(--bg-glass2);
+  border: 1px solid var(--border-glass);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+}
+.quest-title { font-family: var(--font-heading); font-size: 0.9rem; color: var(--gold); margin-bottom: 0.25rem; }
+.quest-desc  { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+.quest-reward { font-size: 0.78rem; color: var(--text-muted); }
+.quest-reward::before { content: '🏆 Reward: '; }
+
+/* Export bar */
+.world-actions-bar {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  padding: 1rem 0 2rem;
+  border-bottom: 1px solid var(--border-glass);
+  margin-bottom: 2rem;
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+
+<!-- ── Header ──────────────────────────────────────────────────────── -->
+<header id="main-header" class="scrolled">
+  <nav class="nav-container">
+    <a href="/" class="logo">
+      <span class="logo-icon">⚔</span>
+      <span class="logo-text">WorldForge<span class="logo-ai">AI</span></span>
+    </a>
+    <div class="nav-cta" style="margin-left:auto;">
+      <span id="header-username" style="font-family:var(--font-heading);font-size:0.75rem;color:var(--gold);letter-spacing:0.1em;"></span>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="toggle-icon">☀</span>
+        <span class="toggle-label">Light</span>
+      </button>
+      <button class="btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+</header>
+
+<!-- ── Layout ───────────────────────────────────────────────────────── -->
+<div class="dashboard-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-label">Navigation</div>
+    <a class="sidebar-link active" id="nav-home" onclick="showSection('home')">
+      <span class="sidebar-icon">🏠</span> Dashboard
+    </a>
+    <a class="sidebar-link" id="nav-generate" onclick="showSection('generate')">
+      <span class="sidebar-icon">⚡</span> Generate World
+    </a>
+    <a class="sidebar-link" id="nav-worlds" onclick="showSection('worlds')">
+      <span class="sidebar-icon">🌍</span> My Worlds
+    </a>
+    <a class="sidebar-link" id="nav-community" onclick="showSection('community')">
+      <span class="sidebar-icon">🏘</span> Community
+    </a>
+
+    <div class="sidebar-label">Account</div>
+    <a class="sidebar-link" id="nav-profile" onclick="showSection('profile')">
+      <span class="sidebar-icon">👤</span> Profile
+    </a>
+    <a class="sidebar-link" onclick="logout()">
+      <span class="sidebar-icon">🚪</span> Logout
+    </a>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+
+    <!-- ══ HOME OVERVIEW ══════════════════════════════════════════════ -->
+    <div id="section-home" class="dash-section">
+      <div class="dashboard-greeting">
+        <div class="greeting-sub">✦ Welcome back,</div>
+        <div class="greeting-name" id="greeting-name">World Builder</div>
+      </div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-card-icon">🌍</div>
+          <div class="stat-card-num" id="stat-worlds">—</div>
+          <div class="stat-card-label">Worlds Created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">👤</div>
+          <div class="stat-card-num" id="stat-chars">—</div>
+          <div class="stat-card-label">Characters</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📖</div>
+          <div class="stat-card-num" id="stat-stories">—</div>
+          <div class="stat-card-label">Story Chapters</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">❤</div>
+          <div class="stat-card-num" id="stat-likes">—</div>
+          <div class="stat-card-label">Total Likes</div>
+        </div>
+      </div>
+
+      <!-- Recent Worlds -->
+      <div class="dash-section-title">Recent Worlds</div>
+      <div id="recent-worlds-list" class="worlds-list">
+        <div class="empty-state"><p>No worlds yet!</p>
+          <button class="btn-primary" onclick="showSection('generate')">⚡ Generate Your First World</button>
+        </div>
+      </div>
+
+      <!-- AI History -->
+      <div class="dash-section-title" style="margin-top:2.5rem;">AI Generation History</div>
+      <div id="ai-history-list"></div>
+    </div>
+
+    <!-- ══ GENERATE WORLD ════════════════════════════════════════════ -->
+    <div id="section-generate" class="dash-section" style="display:none;">
+
+      <!-- Generation Form -->
+      <div class="generator-form-section" id="gen-form-section">
+        <h2 class="form-section-title">⚡ Generate New World</h2>
+        <p class="form-section-sub">Describe your idea and configure the world parameters below.</p>
+
+        <label class="form-label">Your World Idea</label>
+        <textarea class="idea-textarea" id="gen-idea"
+          placeholder="A floating kingdom ruled by ancient storm dragons, where sky pirates raid floating islands and the sun never sets..."
+          rows="3"></textarea>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Genre</label>
+            <select class="form-select" id="gen-genre">
+              <option value="Fantasy">Fantasy</option>
+              <option value="Sci-Fi">Sci-Fi</option>
+              <option value="Mythology">Mythology</option>
+              <option value="Medieval">Medieval</option>
+              <option value="Cyberpunk">Cyberpunk</option>
+              <option value="Post-Apocalyptic">Post-Apocalyptic</option>
+              <option value="Pirate">Pirate</option>
+              <option value="Steampunk">Steampunk</option>
+              <option value="Dark Fantasy">Dark Fantasy</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Theme</label>
+            <select class="form-select" id="gen-theme">
+              <option value="Epic Adventure">Epic Adventure</option>
+              <option value="Political Intrigue">Political Intrigue</option>
+              <option value="War & Conquest">War & Conquest</option>
+              <option value="Mystery & Horror">Mystery & Horror</option>
+              <option value="Romance & Drama">Romance & Drama</option>
+              <option value="Redemption">Redemption</option>
+              <option value="Survival">Survival</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">World Type</label>
+            <select class="form-select" id="gen-world-type">
+              <option value="Continental">Continental</option>
+              <option value="Island Chains">Island Chains</option>
+              <option value="Floating Sky World">Floating Sky World</option>
+              <option value="Underground">Underground</option>
+              <option value="Ocean World">Ocean World</option>
+              <option value="Desert Wasteland">Desert Wasteland</option>
+              <option value="Frozen Tundra">Frozen Tundra</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Magic Level</label>
+            <select class="form-select" id="gen-magic">
+              <option value="High">High Magic</option>
+              <option value="Low">Low Magic</option>
+              <option value="None">No Magic</option>
+              <option value="Technology">Technology-Based</option>
+              <option value="Ancient">Ancient / Forgotten</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Civilization Type</label>
+            <select class="form-select" id="gen-civ">
+              <option value="Medieval">Medieval</option>
+              <option value="Ancient">Ancient</option>
+              <option value="Renaissance">Renaissance</option>
+              <option value="Industrial">Industrial</option>
+              <option value="Futuristic">Futuristic</option>
+              <option value="Tribal">Tribal</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Story Tone</label>
+            <select class="form-select" id="gen-tone">
+              <option value="Epic">Epic</option>
+              <option value="Dark">Dark & Gritty</option>
+              <option value="Hopeful">Hopeful</option>
+              <option value="Mysterious">Mysterious</option>
+              <option value="Comedic">Comedic</option>
+              <option value="Tragic">Tragic</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Characters</label>
+            <select class="form-select" id="gen-chars">
+              <option value="4">4 Characters</option>
+              <option value="5" selected>5 Characters</option>
+              <option value="6">6 Characters</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Villain Type</label>
+            <select class="form-select" id="gen-villain">
+              <option value="Dark Sorcerer">Dark Sorcerer</option>
+              <option value="Tyrant King">Tyrant King</option>
+              <option value="Ancient God">Ancient God</option>
+              <option value="Dragon Lord">Dragon Lord</option>
+              <option value="AI Overlord">AI Overlord</option>
+              <option value="Undead Lich">Undead Lich</option>
+              <option value="Pirate Admiral">Pirate Admiral</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Language Style</label>
+            <select class="form-select" id="gen-lang">
+              <option value="Archaic Fantasy">Archaic Fantasy</option>
+              <option value="Modern Prose">Modern Prose</option>
+              <option value="Epic Poetry">Epic Poetry</option>
+              <option value="Gritty Realistic">Gritty Realistic</option>
+              <option value="Mythological">Mythological</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="gen-progress" id="gen-progress">
+          <div class="gen-progress-label">
+            <span id="progress-text">Generating world...</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill"></div>
+          </div>
+        </div>
+
+        <button class="btn-generate" id="generate-btn" onclick="generateWorld()"
+                style="width:100%;justify-content:center;font-size:1rem;padding:18px;">
+          <span class="btn-icon">🌍</span>
+          Forge This World with AI
+        </button>
+      </div>
+
+      <!-- World Output -->
+      <div class="world-output" id="world-output">
+
+        <!-- Actions bar -->
+        <div class="world-actions-bar">
+          <button class="btn-primary" onclick="exportWorldPDF()" title="Export world as PDF">📄 Export PDF</button>
+          <button class="btn-ghost"   onclick="togglePublic()">🌐 <span id="public-btn-label">Make Public</span></button>
+          <button class="btn-ghost"   onclick="shareWorld()">🔗 Share</button>
+          <button class="btn-ghost"   onclick="resetGenerator()">⚡ New World</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="output-tabs">
+          <button class="output-tab active" onclick="switchTab('overview','overview-pane',this)">🌍 Overview</button>
+          <button class="output-tab" onclick="switchTab('kingdoms','kingdoms-pane',this)">🏰 Kingdoms</button>
+          <button class="output-tab" onclick="switchTab('characters','characters-pane',this)">👤 Characters</button>
+          <button class="output-tab" onclick="switchTab('map','map-pane',this)">🗺 Map</button>
+          <button class="output-tab" onclick="switchTab('story','story-pane',this)">📖 Story</button>
+          <button class="output-tab" onclick="switchTab('creatures','creatures-pane',this)">🐉 Creatures</button>
+          <button class="output-tab" onclick="switchTab('weapons','weapons-pane',this)">⚔ Weapons</button>
+          <button class="output-tab" onclick="switchTab('events','events-pane',this)">⚡ Events</button>
+        </div>
+
+        <!-- ── OVERVIEW ─────────────────────────────────────────────── -->
+        <div class="tab-pane active" id="overview-pane">
+          <h1 class="world-title-display" id="out-world-name">—</h1>
+          <p class="world-tagline" id="out-tagline"></p>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-card-title">Description</div>
+              <div class="info-card-text" id="out-description"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Ancient Lore</div>
+              <div class="info-card-text" id="out-lore"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">History</div>
+              <div class="info-card-text" id="out-history"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Magic System</div>
+              <div class="info-card-text" id="out-magic"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Political System</div>
+              <div class="info-card-text" id="out-politics"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Economy</div>
+              <div class="info-card-text" id="out-economy"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">Religion</div>
+              <div class="info-card-text" id="out-religion"></div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-title">World Rules</div>
+              <ul class="rules-list" id="out-rules"></ul>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div class="dash-section-title" style="margin-top:2rem;">Timeline of Ages</div>
+          <ul class="timeline-list" id="out-timeline"></ul>
+        </div>
+
+        <!-- ── KINGDOMS ─────────────────────────────────────────────── -->
+        <div class="tab-pane" id="kingdoms-pane">
+          <div class="kingdoms-grid" id="out-kingdoms"></div>
+        </div>
+
+        <!-- ── CHARACTERS ───────────────────────────────────────────── -->
+        <div class="tab-pane" id="characters-pane">
+          <div class="characters-grid" id="out-characters"></div>
+        </div>
+
+        <!-- ── MAP ─────────────────────────────────────────────────── -->
+        <div class="tab-pane" id="map-pane">
+          <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+            Interactive procedurally generated fantasy map. Hover over regions to explore.
+          </p>
+          <div class="map-container">
+            <div class="map-inner" id="out-map"></div>
+          </div>
+          <div style="margin-top:1rem;display:flex;gap:1rem;">
+            <button class="btn-ghost" onclick="downloadMap()">⬇ Download Map</button>
+          </div>
+        </div>
+
+        <!-- ── STORY ────────────────────────────────────────────────── -->
+        <div class="tab-pane" id="story-pane">
+          <div id="story-chapters"></div>
+          <div class="story-actions">
+            <button class="btn-primary" id="continue-story-btn" onclick="continueStory()">
+              📖 Continue Story
+            </button>
+            <button class="btn-ghost" onclick="switchTab('story','story-pane',null)">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- ── CREATURES ────────────────────────────────────────────── -->
+        <div class="tab-pane" id="creatures-pane">
+          <div class="creatures-grid" id="out-creatures"></div>
+        </div>
+
+        <!-- ── WEAPONS ──────────────────────────────────────────────── -->
+        <div class="tab-pane" id="weapons-pane">
+          <div class="creatures-grid" id="out-weapons"></div>
+        </div>
+
+        <!-- ── EVENTS ───────────────────────────────────────────────── -->
+        <div class="tab-pane" id="events-pane">
+          <div class="events-list" id="out-events"></div>
+        </div>
+
+      </div><!-- /world-output -->
+    </div><!-- /section-generate -->
+
+    <!-- ══ MY WORLDS ════════════════════════════════════════════════ -->
+    <div id="section-worlds" class="dash-section" style="display:none;">
+      <div class="dashboard-greeting">
+        <div class="greeting-name">My Worlds</div>
+      </div>
+      <div id="my-worlds-list" class="worlds-list">
+        <div class="empty-state">
+          <p>You haven't created any worlds yet.</p>
+          <button class="btn-primary" onclick="showSection('generate')">⚡ Generate Your First World</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ COMMUNITY ════════════════════════════════════════════════ -->
+    <div id="section-community" class="dash-section" style="display:none;">
+      <div class="dashboard-greeting">
+        <div class="greeting-name">Community Worlds</div>
+      </div>
+      <div id="community-worlds-list" class="worlds-gallery" style="margin-top:1.5rem;"></div>
+    </div>
+
+    <!-- ══ PROFILE ══════════════════════════════════════════════════ -->
+    <div id="section-profile" class="dash-section" style="display:none;">
+      <div class="dashboard-greeting">
+        <div class="greeting-name">Profile Settings</div>
+      </div>
+      <div class="generator-form-section" style="max-width:520px;">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-input" id="profile-username" readonly
+                 style="opacity:0.6;cursor:not-allowed;"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="profile-email" readonly
+                 style="opacity:0.6;cursor:not-allowed;"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio</label>
+          <textarea class="idea-textarea" id="profile-bio" rows="3"
+                    placeholder="Tell the realm who you are..."></textarea>
+        </div>
+        <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── AI Generation Loading Overlay ────────────────────────────────── -->
+<div class="gen-loading-overlay" id="gen-loading">
+  <div class="gen-loading-globe">🌍</div>
+  <div class="gen-loading-title">Forging Your World...</div>
+  <div class="gen-loading-steps">
+    <div class="gen-step" id="step-1"><span class="gen-step-icon">⚡</span> Building world foundations</div>
+    <div class="gen-step" id="step-2"><span class="gen-step-icon">🏰</span> Creating kingdoms & rulers</div>
+    <div class="gen-step" id="step-3"><span class="gen-step-icon">👤</span> Crafting characters & heroes</div>
+    <div class="gen-step" id="step-4"><span class="gen-step-icon">🐉</span> Summoning creatures & weapons</div>
+    <div class="gen-step" id="step-5"><span class="gen-step-icon">📖</span> Writing the opening chapter</div>
+    <div class="gen-step" id="step-6"><span class="gen-step-icon">🗺</span> Drawing the world map</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+/* ═════════════════════════════════════════════════════════════════
+   Dashboard Application Script
+═════════════════════════════════════════════════════════════════ */
+
+let currentUser   = null;
+let currentWorld  = null;
+let currentWorldId = null;
+let isPublic      = false;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async function boot() {
+  try {
+    // Use shared cached getAuthState — avoids a second /api/auth/me call
+    // (app.js already fired one; this reuses the same promise)
+    const d = typeof getAuthState === 'function'
+      ? await getAuthState()
+      : await fetch('/api/auth/me').then(r => r.ok ? r.json() : { authenticated: false });
+
+    if (!d || !d.authenticated) { window.location.href = '/login'; return; }
+    currentUser = d.user;
+    document.getElementById('greeting-name').textContent = currentUser.username;
+    document.getElementById('header-username').textContent = '✦ ' + currentUser.username;
+    document.getElementById('profile-username').value = currentUser.username;
+    document.getElementById('profile-email').value    = currentUser.email;
+    await loadDashboardStats();
+
+    // Check for pending idea from homepage
+    const pending = sessionStorage.getItem('pendingIdea');
+    if (pending) {
+      sessionStorage.removeItem('pendingIdea');
+      document.getElementById('gen-idea').value = pending;
+      showSection('generate');
+    }
+  } catch { window.location.href = '/login'; }
+})();
+
+
+// ── Load Dashboard Stats ──────────────────────────────────────────────────────
+async function loadDashboardStats() {
+  try {
+    const r = await fetch('/api/dashboard/stats');
+    const d = await r.json();
+    document.getElementById('stat-worlds').textContent  = d.world_count  || 0;
+    document.getElementById('stat-chars').textContent   = d.char_count   || 0;
+    document.getElementById('stat-stories').textContent = d.story_count  || 0;
+    document.getElementById('stat-likes').textContent   = d.total_likes  || 0;
+
+    // Recent worlds
+    const recentEl = document.getElementById('recent-worlds-list');
+    if (d.recent_worlds && d.recent_worlds.length > 0) {
+      recentEl.innerHTML = d.recent_worlds.map(w => `
+        <div class="world-list-item" onclick="loadWorldDetail(${w.id})">
+          <div>
+            <div class="world-list-name">${escHtml(w.world_name)}</div>
+            <div class="world-list-meta">${escHtml(w.genre)} · ${timeAgo(w.created_at)}</div>
+          </div>
+          <div class="world-list-actions">
+            <button class="btn-icon-sm" title="Delete" onclick="deleteWorld(event,${w.id})">🗑</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // AI History
+    const histEl = document.getElementById('ai-history-list');
+    if (d.ai_history && d.ai_history.length > 0) {
+      histEl.innerHTML = d.ai_history.map(h => `
+        <div class="ai-history-item">
+          <span class="ai-hist-icon">⚡</span>
+          <span class="ai-hist-prompt">${escHtml(h.prompt || '—')}</span>
+          <span class="ai-hist-time">${timeAgo(h.created_at)}</span>
+        </div>
+      `).join('');
+    } else {
+      histEl.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:1rem 0;">No AI history yet.</div>';
+    }
+  } catch(e) { console.error('Stats error:', e); }
+}
+
+
+// ── Section Navigation ────────────────────────────────────────────────────────
+function showSection(name) {
+  ['home','generate','worlds','community','profile'].forEach(s => {
+    document.getElementById('section-' + s).style.display = 'none';
+    const nav = document.getElementById('nav-' + s);
+    if (nav) nav.classList.remove('active');
+  });
+  document.getElementById('section-' + name).style.display = 'block';
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+
+  if (name === 'worlds')    loadMyWorlds();
+  if (name === 'community') loadCommunityWorlds();
+  if (name === 'profile')   loadProfile();
+
+  window.scrollTo(0,0);
+}
+
+
+// ── Generate World ────────────────────────────────────────────────────────────
+async function generateWorld() {
+  const idea = document.getElementById('gen-idea').value.trim();
+  if (!idea) { showToast('✦ Please enter a world idea!'); return; }
+
+  const params = {
+    idea,
+    genre:              document.getElementById('gen-genre').value,
+    theme:              document.getElementById('gen-theme').value,
+    world_type:         document.getElementById('gen-world-type').value,
+    magic_level:        document.getElementById('gen-magic').value,
+    civilization_type:  document.getElementById('gen-civ').value,
+    story_tone:         document.getElementById('gen-tone').value,
+    character_count:    parseInt(document.getElementById('gen-chars').value),
+    villain_type:       document.getElementById('gen-villain').value,
+    language_style:     document.getElementById('gen-lang').value,
+  };
+
+  // Show loading overlay
+  showLoadingOverlay();
+
+  try {
+    const r = await fetch('/api/ai/generate-world', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(params)
+    });
+    const d = await r.json();
+
+    hideLoadingOverlay();
+
+    if (d.success) {
+      currentWorld   = d.world;
+      currentWorldId = d.world.world_id;
+      isPublic       = false;
+      renderWorldOutput(d.world);
+      showToast('✦ World "' + d.world.world_name + '" forged successfully!');
+      await loadDashboardStats();
+    } else {
+      showToast('⚠ Generation failed: ' + (d.error || 'Unknown error'));
+    }
+  } catch(e) {
+    hideLoadingOverlay();
+    showToast('⚠ Error: ' + e.message);
+  }
+}
+
+
+// ── Loading Overlay ───────────────────────────────────────────────────────────
+let stepInterval;
+function showLoadingOverlay() {
+  document.getElementById('gen-loading').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  const steps = ['step-1','step-2','step-3','step-4','step-5','step-6'];
+  let idx = 0;
+  steps.forEach(s => document.getElementById(s).className = 'gen-step');
+
+  stepInterval = setInterval(() => {
+    if (idx < steps.length) {
+      if (idx > 0) document.getElementById(steps[idx-1]).className = 'gen-step done';
+      document.getElementById(steps[idx]).className = 'gen-step active';
+      idx++;
+    }
+  }, 3000);
+}
+function hideLoadingOverlay() {
+  clearInterval(stepInterval);
+  document.getElementById('gen-loading').classList.remove('active');
+  document.body.style.overflow = '';
+  ['step-1','step-2','step-3','step-4','step-5','step-6'].forEach(
+    s => document.getElementById(s).className = 'gen-step done'
+  );
+}
+
+
+// ── Render World Output ───────────────────────────────────────────────────────
+function renderWorldOutput(w) {
+  // Overview
+  document.getElementById('out-world-name').textContent  = w.world_name  || '';
+  document.getElementById('out-tagline').textContent     = w.tagline      || '';
+  document.getElementById('out-description').textContent = w.description  || '';
+  document.getElementById('out-lore').textContent        = w.lore         || '';
+  document.getElementById('out-history').textContent     = w.history      || '';
+  document.getElementById('out-magic').textContent       = w.magic_system || '';
+  document.getElementById('out-politics').textContent    = w.political_system || '';
+  document.getElementById('out-economy').textContent     = w.economy      || '';
+  document.getElementById('out-religion').textContent    = w.religion     || '';
+
+  // Rules
+  const rulesEl = document.getElementById('out-rules');
+  rulesEl.innerHTML = (w.world_rules || []).map(r => `<li>${escHtml(r)}</li>`).join('');
+
+  // Timeline
+  const tlEl = document.getElementById('out-timeline');
+  tlEl.innerHTML = (w.timeline || []).map(t => `
+    <li class="timeline-item">
+      <div class="timeline-era">${escHtml(t.era||'')} <span class="timeline-year">(${escHtml(t.year||'')})</span></div>
+      <div class="timeline-event">${escHtml(t.event||'')}</div>
+    </li>
+  `).join('');
+
+  // Kingdoms
+  const kEl = document.getElementById('out-kingdoms');
+  kEl.innerHTML = (w.kingdoms || []).map(k => {
+    const colors = (k.flag_colors||'#333,#666').split(',');
+    const army   = Math.min(100, Math.max(0, parseInt(k.army_power)||50));
+    return `
+      <div class="kingdom-card">
+        <div class="kingdom-flag">
+          ${colors.map(c => `<div class="flag-swatch" style="background:${c.trim()}"></div>`).join('')}
+        </div>
+        <div class="kingdom-name">${escHtml(k.kingdom_name||'')}</div>
+        <div class="kingdom-ruler">👑 ${escHtml(k.ruler||'')}</div>
+        <div class="kingdom-army">
+          ⚔ Army Power: ${army}
+          <div class="army-bar"><div class="army-fill" style="width:${army}%"></div></div>
+        </div>
+        <div class="kingdom-desc">${escHtml(k.description||'')}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Characters
+  const cEl = document.getElementById('out-characters');
+  cEl.innerHTML = (w.characters || []).map(c => {
+    const roleClass = /hero/i.test(c.role) ? 'hero' : /villain/i.test(c.role) ? 'villain' : 'other';
+    return `
+      <div class="character-card">
+        <span class="char-role ${roleClass}">${escHtml(c.role||'')}</span>
+        <div class="char-name">${escHtml(c.name||'')}</div>
+        <div class="char-archetype">"${escHtml(c.archetype||'')}"</div>
+        <div class="char-powers">⚡ ${escHtml(c.powers||'')}</div>
+        <div class="char-backstory">${escHtml(c.backstory||'')}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Map
+  document.getElementById('out-map').innerHTML = w.map_svg || '<div style="padding:3rem;text-align:center;color:var(--text-muted)">Map unavailable</div>';
+
+  // Story Chapter 1
+  renderStoryChapters([w.story]);
+
+  // Creatures
+  const crEl = document.getElementById('out-creatures');
+  crEl.innerHTML = (w.creatures || []).map(cr => {
+    const dots = Array.from({length:10}, (_,i) =>
+      `<div class="danger-dot ${i < (cr.danger_level||5) ? 'filled' : ''}"></div>`
+    ).join('');
+    return `
+      <div class="creature-card">
+        <div class="creature-name">${escHtml(cr.name||'')}</div>
+        <div class="creature-species">${escHtml(cr.species||'')}</div>
+        <div class="danger-meter" title="Danger: ${cr.danger_level}/10">${dots}</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem">⚡ ${escHtml(cr.powers||'')}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted)">📍 ${escHtml(cr.habitat||'')} — ${escHtml(cr.lore||'')}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Weapons
+  const wEl = document.getElementById('out-weapons');
+  wEl.innerHTML = (w.weapons || []).map(wp => `
+    <div class="weapon-card">
+      <div class="weapon-name">${escHtml(wp.name||'')}</div>
+      <div class="weapon-type">${escHtml(wp.weapon_type||'')} · Power ${wp.power_level||'?'}/10</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem">${escHtml(wp.lore||'')}</div>
+      <div style="font-size:0.82rem;color:var(--text-muted)">Wielded by: ${escHtml(wp.owner||'Unknown')}</div>
+    </div>
+  `).join('');
+
+  // Events
+  const evEl = document.getElementById('out-events');
+  evEl.innerHTML = (w.dynamic_events || []).map(ev => `
+    <div class="event-item">
+      <div>
+        <span class="event-type-badge">${escHtml(ev.type||'Event')}</span>
+      </div>
+      <div>
+        <div class="event-title">${escHtml(ev.title||'')}</div>
+        <div class="event-desc">${escHtml(ev.description||'')}${ev.affected_kingdom ? ` — Affecting: ${escHtml(ev.affected_kingdom)}` : ''}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Show output
+  document.getElementById('gen-form-section').style.display = 'none';
+  document.getElementById('world-output').classList.add('active');
+}
+
+
+function renderStoryChapters(chapters) {
+  const el = document.getElementById('story-chapters');
+  el.innerHTML = chapters.filter(Boolean).map(ch => {
+    if (!ch) return '';
+    const dialogues = Array.isArray(ch.dialogues) ? ch.dialogues : [];
+    const quests    = Array.isArray(ch.quests)    ? ch.quests    : [];
+    return `
+      <div class="story-card">
+        <div class="story-chapter-title">${escHtml(ch.chapter_title||'Chapter')}</div>
+        <div class="story-content">${escHtml(ch.content||'')}</div>
+        ${dialogues.length ? `
+          <div class="dialogue-section">
+            <div class="dialogue-label">✦ Dialogues</div>
+            ${dialogues.map(dl => `
+              <div class="dialogue-item">
+                <div class="dialogue-speaker">${escHtml(dl.speaker||'')}:</div>
+                <div class="dialogue-line">"${escHtml(dl.line||'')}"</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${quests.length ? `
+          <div class="quests-list">
+            ${quests.map(q => `
+              <div class="quest-item">
+                <div class="quest-title">🗡 ${escHtml(q.title||'')}</div>
+                <div class="quest-desc">${escHtml(q.description||'')}</div>
+                <div class="quest-reward">${escHtml(q.reward||'')}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+
+// ── Continue Story ────────────────────────────────────────────────────────────
+async function continueStory() {
+  if (!currentWorldId) return;
+  const btn = document.getElementById('continue-story-btn');
+  btn.disabled = true;
+  btn.textContent = '📖 Writing chapter...';
+  try {
+    const r = await fetch(`/api/ai/continue-story/${currentWorldId}`, { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      const el = document.getElementById('story-chapters');
+      el.insertAdjacentHTML('beforeend', renderSingleChapter(d.chapter));
+      showToast('✦ New chapter written!');
+      el.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      showToast('⚠ ' + (d.error || 'Failed to continue story'));
+    }
+  } catch(e) { showToast('⚠ Error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '📖 Continue Story'; }
+}
+
+function renderSingleChapter(ch) {
+  if (!ch) return '';
+  const dialogues = Array.isArray(ch.dialogues) ? ch.dialogues : [];
+  const quests    = Array.isArray(ch.quests)    ? ch.quests    : [];
+  return `
+    <div class="story-card">
+      <div class="story-chapter-title">${escHtml(ch.chapter_title||'')}</div>
+      <div class="story-content">${escHtml(ch.content||'')}</div>
+      ${dialogues.length ? `<div class="dialogue-section"><div class="dialogue-label">✦ Dialogues</div>${dialogues.map(dl=>`<div class="dialogue-item"><div class="dialogue-speaker">${escHtml(dl.speaker||'')}:</div><div class="dialogue-line">"${escHtml(dl.line||'')}"</div></div>`).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+function switchTab(name, paneId, btn) {
+  document.querySelectorAll('.output-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(paneId).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+
+// ── My Worlds ────────────────────────────────────────────────────────────────
+async function loadMyWorlds() {
+  try {
+    const r = await fetch('/api/worlds/');
+    const d = await r.json();
+    const el = document.getElementById('my-worlds-list');
+    if (!d.worlds || d.worlds.length === 0) {
+      el.innerHTML = '<div class="empty-state"><p>No worlds yet.</p><button class="btn-primary" onclick="showSection(\'generate\')">⚡ Generate World</button></div>';
+      return;
+    }
+    el.innerHTML = d.worlds.map(w => `
+      <div class="world-list-item" onclick="loadWorldDetail(${w.id})">
+        <div>
+          <div class="world-list-name">${escHtml(w.world_name)}</div>
+          <div class="world-list-meta">${escHtml(w.genre)} · Magic: ${escHtml(w.magic_level)} · ${timeAgo(w.created_at)} · ${w.is_public ? '🌐 Public' : '🔒 Private'} · ❤ ${w.likes}</div>
+        </div>
+        <div class="world-list-actions">
+          <button class="btn-icon-sm" title="Delete" onclick="deleteWorld(event,${w.id})">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function loadWorldDetail(id) {
+  showSection('generate');
+  showLoadingOverlay();
+  try {
+    const r = await fetch(`/api/worlds/${id}`);
+    const d = await r.json();
+    hideLoadingOverlay();
+    if (d.world) {
+      currentWorldId = id;
+      isPublic = !!d.world.is_public;
+      document.getElementById('public-btn-label').textContent = isPublic ? 'Make Private' : 'Make Public';
+      // Reconstruct world object for rendering
+      const w = d.world;
+      w.story       = w.stories?.[0]  || {};
+      w.kingdoms    = w.kingdoms      || [];
+      w.characters  = w.characters    || [];
+      w.creatures   = w.creatures     || [];
+      w.weapons     = w.weapons       || [];
+      w.dynamic_events = [];
+      w.map_svg     = w.map_svg       || '';
+      currentWorld  = w;                      // ← store for PDF export
+      renderWorldOutput(w);
+      if (w.stories && w.stories.length > 0) renderStoryChapters(w.stories);
+    }
+  } catch(e) { hideLoadingOverlay(); showToast('⚠ Failed to load world'); }
+}
+
+async function deleteWorld(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this world forever?')) return;
+  await fetch(`/api/worlds/${id}`, { method: 'DELETE' });
+  showToast('✦ World deleted.');
+  loadMyWorlds();
+  loadDashboardStats();
+}
+
+
+// ── Community ────────────────────────────────────────────────────────────────
+async function loadCommunityWorlds() {
+  const el = document.getElementById('community-worlds-list');
+  el.innerHTML = '<div style="color:var(--text-muted)">Loading...</div>';
+  try {
+    const r = await fetch('/api/worlds/community');
+    const d = await r.json();
+    if (!d.worlds || !d.worlds.length) {
+      el.innerHTML = '<div class="empty-state"><p>No public worlds yet. Be the first!</p></div>';
+      return;
+    }
+    el.innerHTML = d.worlds.map(w => `
+      <div class="world-gallery-card" onclick="loadWorldDetail(${w.id})">
+        <div class="wgc-genre">${escHtml(w.genre||'Fantasy')}</div>
+        <h3 class="wgc-name">${escHtml(w.world_name)}</h3>
+        <div class="wgc-meta">
+          <span>by ${escHtml(w.username)}</span>
+          <span>❤ ${w.likes}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = '<div class="empty-state">Could not load worlds.</div>'; }
+}
+
+
+// ── World Actions ────────────────────────────────────────────────────────────
+async function togglePublic() {
+  if (!currentWorldId) return;
+  try {
+    const r = await fetch(`/api/worlds/${currentWorldId}/toggle-public`, { method: 'POST' });
+    const d = await r.json();
+    isPublic = d.is_public;
+    document.getElementById('public-btn-label').textContent = isPublic ? 'Make Private' : 'Make Public';
+    showToast(isPublic ? '🌐 World is now public!' : '🔒 World is now private.');
+  } catch { showToast('⚠ Failed to update visibility'); }
+}
+
+function shareWorld() {
+  if (!currentWorldId) return;
+  const url = window.location.origin + '/dashboard#world-' + currentWorldId;
+  navigator.clipboard?.writeText(url).then(() => showToast('✦ Link copied to clipboard!'));
+}
+
+function resetGenerator() {
+  currentWorld = null; currentWorldId = null;
+  document.getElementById('gen-form-section').style.display = 'block';
+  document.getElementById('world-output').classList.remove('active');
+  document.getElementById('gen-idea').value = '';
+  document.getElementById('story-chapters').innerHTML = '';
+  window.scrollTo(0,0);
+}
+
+function downloadMap() {
+  const svg = document.querySelector('#out-map svg');
+  if (!svg) { showToast('No map to download.'); return; }
+  const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = (currentWorld?.world_name || 'world') + '-map.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportWorldPDF() {
+  if (!currentWorld) { showToast('⚠ No world loaded.'); return; }
+  const w = currentWorld;
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const mapSvg = document.querySelector('#out-map svg')?.outerHTML || '';
+
+  // ── Section builders ───────────────────────────────────────────────────────
+  const rulesHtml = (w.world_rules||[]).map((r,i)=>
+    `<div class="pdf-rule"><span class="pdf-rule-num">${i+1}</span>${esc(r)}</div>`
+  ).join('');
+
+  const timelineHtml = (w.timeline||[]).map(t=>
+    `<div class="pdf-timeline-item">
+       <div class="pdf-tl-dot"></div>
+       <div class="pdf-tl-content">
+         <div class="pdf-tl-era">${esc(t.era||'')} <span class="pdf-tl-year">${esc(t.year||'')}</span></div>
+         <div class="pdf-tl-event">${esc(t.event||'')}</div>
+       </div>
+     </div>`
+  ).join('');
+
+  const kingdomsHtml = (w.kingdoms||[]).map(k=>{
+    const cols = (k.flag_colors||'#555,#888').split(',');
+    const army = Math.min(100,Math.max(0,parseInt(k.army_power)||50));
+    return `<div class="pdf-kingdom">
+      <div class="pdf-k-header">
+        <div class="pdf-flag">${cols.map(c=>`<div style="background:${c.trim()};flex:1;height:100%"></div>`).join('')}</div>
+        <div>
+          <div class="pdf-k-name">${esc(k.kingdom_name||'')}</div>
+          <div class="pdf-k-ruler">👑 ${esc(k.ruler||'')} &nbsp;·&nbsp; 🏙 ${esc(k.capital_city||'')}</div>
+        </div>
+      </div>
+      <div class="pdf-army-row">⚔ Army Power: ${army}/100
+        <div class="pdf-army-track"><div class="pdf-army-fill" style="width:${army}%"></div></div>
+      </div>
+      <div class="pdf-k-desc">${esc(k.description||'')} <em>${esc(k.politics||'')}</em></div>
+    </div>`;
+  }).join('');
+
+  const charsHtml = (w.characters||[]).map(c=>{
+    const cls = /hero/i.test(c.role||'') ? 'hero' : /villain/i.test(c.role||'') ? 'villain' : 'other';
+    return `<div class="pdf-char">
+      <div class="pdf-char-header">
+        <span class="pdf-role ${cls}">${esc(c.role||'')}</span>
+        <span class="pdf-char-name">${esc(c.name||'')}</span>
+        <span class="pdf-archetype">${esc(c.archetype||'')}</span>
+      </div>
+      <div class="pdf-char-body">
+        <div><strong>Powers:</strong> ${esc(c.powers||'')}</div>
+        <div><strong>Backstory:</strong> ${esc(c.backstory||'')}</div>
+        <div><strong>Appearance:</strong> ${esc(c.appearance||'')}</div>
+        <div><strong>Relations:</strong> ${esc(c.relationships||'')}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const creaturesHtml = (w.creatures||[]).map(cr=>{
+    const d = Math.min(10,Math.max(0,parseInt(cr.danger_level)||5));
+    const dots = Array.from({length:10},(_,i)=>
+      `<span class="pdf-dot${i<d?' filled':''}">${i<d?'◆':'◇'}</span>`
+    ).join('');
+    return `<div class="pdf-creature">
+      <div class="pdf-cr-name">${esc(cr.name||'')} <span class="pdf-cr-species">${esc(cr.species||'')}</span></div>
+      <div class="pdf-danger">${dots} Danger ${d}/10</div>
+      <div class="pdf-cr-detail">⚡ ${esc(cr.powers||'')} &nbsp;·&nbsp; 📍 ${esc(cr.habitat||'')}</div>
+      <div class="pdf-cr-lore"><em>${esc(cr.lore||'')}</em></div>
+    </div>`;
+  }).join('');
+
+  const weaponsHtml = (w.weapons||[]).map(wp=>{
+    const p = Math.min(10,Math.max(0,parseInt(wp.power_level)||5));
+    return `<div class="pdf-weapon">
+      <div class="pdf-wp-name">${esc(wp.name||'')} <span class="pdf-wp-type">${esc(wp.weapon_type||'')}</span>
+        <span class="pdf-wp-power">Power ${p}/10</span></div>
+      <div class="pdf-wp-detail">${esc(wp.lore||'')} — <em>Wielded by ${esc(wp.owner||'Unknown')}</em></div>
+    </div>`;
+  }).join('');
+
+  const story = w.story || {};
+  const dialoguesHtml = (story.dialogues||[]).map(d=>
+    `<div class="pdf-dialogue"><span class="pdf-speaker">${esc(d.speaker||'')}:</span> &ldquo;${esc(d.line||'')}&rdquo;</div>`
+  ).join('');
+  const questsHtml = (story.quests||[]).map(q=>
+    `<div class="pdf-quest"><div class="pdf-q-title">🗡 ${esc(q.title||'')}</div>
+     <div class="pdf-q-desc">${esc(q.description||'')}</div>
+     <div class="pdf-q-reward">Reward: ${esc(q.reward||'')}</div></div>`
+  ).join('');
+
+  const eventsHtml = (w.dynamic_events||[]).map(ev=>
+    `<div class="pdf-event">
+       <span class="pdf-ev-badge">${esc(ev.type||'Event')}</span>
+       <span class="pdf-ev-title">${esc(ev.title||'')}</span> — ${esc(ev.description||'')}
+       ${ev.affected_kingdom?`<span class="pdf-ev-kingdom"> · ${esc(ev.affected_kingdom)}</span>`:''}
+     </div>`
+  ).join('');
+
+  // ── Full HTML Document ─────────────────────────────────────────────────────
+  const now = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${esc(w.world_name||'World')} — WorldForge AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --gold: #b8860b;
+    --gold-light: #d4a017;
+    --crimson: #7a1414;
+    --dark: #1a1208;
+    --ink: #2c1f0e;
+    --parchment: #fdf6e3;
+    --parchment-dark: #f5e6c4;
+    --border: rgba(184,134,11,0.35);
+    --text: #3d2c14;
+    --muted: #7a6040;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: var(--parchment);
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.65;
+  }
+
+  /* ── Cover Page ─────────────────────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 3rem;
+    background: linear-gradient(160deg, #0d0a04 0%, #1a1208 40%, #2a1e0a 100%);
+    color: #f5e6c8;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 50% 40%, rgba(184,134,11,0.12), transparent);
+  }
+  .cover-border {
+    position: absolute;
+    inset: 24px;
+    border: 1.5px solid rgba(184,134,11,0.4);
+    pointer-events: none;
+  }
+  .cover-border::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 0.5px solid rgba(184,134,11,0.2);
+  }
+  .cover-rune {
+    font-size: 3rem;
+    opacity: 0.15;
+    margin-bottom: 1.5rem;
+    letter-spacing: 1.5rem;
+    color: #ffd700;
+  }
+  .cover-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 3rem;
+    color: #ffd700;
+    text-shadow: 0 0 40px rgba(255,215,0,0.4);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .cover-tagline {
+    font-family: 'EB Garamond', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: #d4a55a;
+    margin-bottom: 3rem;
+    max-width: 500px;
+    position: relative;
+  }
+  .cover-divider {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #b8860b, transparent);
+    margin: 1.5rem auto;
+  }
+  .cover-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 2rem 0;
+    position: relative;
+    max-width: 540px;
+  }
+  .cover-meta-item {
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid rgba(184,134,11,0.25);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+  }
+  .cover-meta-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    margin-bottom: 0.3rem;
+    opacity: 0.7;
+  }
+  .cover-meta-value {
+    font-size: 0.85rem;
+    color: #e8d5b7;
+    font-weight: 600;
+  }
+  .cover-worldforge {
+    position: relative;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(184,134,11,0.6);
+    margin-top: 3rem;
+  }
+  .cover-date {
+    font-size: 0.75rem;
+    color: rgba(200,180,140,0.5);
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+
+  /* ── Page Layout ────────────────────────────────────────────── */
+  .page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2.5rem 3rem;
+  }
+
+  .chapter {
+    page-break-before: always;
+    padding-top: 2rem;
+  }
+  .chapter:first-of-type { page-break-before: auto; }
+
+  /* ── Section Headers ────────────────────────────────────────── */
+  .section-head {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    border-bottom: 1.5px solid var(--border);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .section-head::before {
+    content: '⸻';
+    color: var(--gold);
+    opacity: 0.5;
+    font-size: 0.7rem;
+  }
+
+  .sub-head {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 1.5rem 0 0.6rem;
+    opacity: 0.85;
+  }
+
+  /* ── Info Grid (overview fields) ────────────────────────────── */
+  .info-block { margin-bottom: 1.1rem; }
+  .info-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.2rem;
+  }
+  .info-text { color: var(--ink); }
+
+  /* ── World Rules ────────────────────────────────────────────── */
+  .pdf-rule {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--ink);
+  }
+  .pdf-rule-num {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--gold);
+    min-width: 1.2rem;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  /* ── Timeline ───────────────────────────────────────────────── */
+  .pdf-timeline { position: relative; padding-left: 1.5rem; }
+  .pdf-timeline-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+  }
+  .pdf-tl-dot {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .pdf-tl-era {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+  .pdf-tl-year { font-size: 0.7rem; color: var(--muted); }
+  .pdf-tl-event { color: var(--ink); font-size: 0.95rem; }
+
+  /* ── Map ────────────────────────────────────────────────────── */
+  .pdf-map {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 1rem 0;
+    background: #0a1628;
+    max-height: 380px;
+  }
+  .pdf-map svg { width: 100%; height: auto; display: block; }
+
+  /* ── Kingdoms ───────────────────────────────────────────────── */
+  .pdf-kingdom {
+    background: var(--parchment-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    page-break-inside: avoid;
+  }
+  .pdf-k-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.6rem; }
+  .pdf-flag {
+    width: 36px; height: 24px;
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    border: 1px solid rgba(0,0,0,0.2);
+    flex-shrink: 0;
+  }
+  .pdf-k-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: var(--dark);
+    font-weight: 700;
+  }
+  .pdf-k-ruler { font-size: 0.85rem; color: var(--muted); }
+  .pdf-army-row { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .pdf-army-track {
+    display: inline-block;
+    width: 120px; height: 5px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+    overflow: hidden;
+  }
+  .pdf-army-fill { height: 100%; background: var(--gold); border-radius: 3px; }
+  .pdf-k-desc { font-size: 0.9rem; color: var(--ink); }
+
+  /* ── Characters ─────────────────────────────────────────────── */
+  .pdf-char {
+    background: var(--parchment-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+  .pdf-char-header {
+    background: linear-gradient(135deg, rgba(184,134,11,0.12), transparent);
+    padding: 0.75rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .pdf-role {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+  .pdf-role.hero    { background:#1a3a12; color:#4caf50; }
+  .pdf-role.villain { background:#3a0a0a; color:#f44336; }
+  .pdf-role.other   { background:#1a1a3a; color:#7986cb; }
+  .pdf-char-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--dark);
+  }
+  .pdf-archetype { font-style: italic; color: var(--muted); font-size: 0.85rem; }
+  .pdf-char-body { padding: 0.75rem 1.2rem; font-size: 0.9rem; }
+  .pdf-char-body div { margin-bottom: 0.3rem; }
+
+  /* ── Creatures ──────────────────────────────────────────────── */
+  .pdf-creature {
+    background: var(--parchment-dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1.2rem;
+    margin-bottom: 0.8rem;
+    page-break-inside: avoid;
+  }
+  .pdf-cr-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.3rem;
+  }
+  .pdf-cr-species {
+    font-family: 'EB Garamond', serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 0.5rem;
+  }
+  .pdf-danger { font-size: 0.75rem; color: var(--crimson); margin-bottom: 0.3rem; letter-spacing: 0.05em; }
+  .pdf-dot { font-size: 0.6rem; }
+  .pdf-dot.filled { color: var(--crimson); }
+  .pdf-cr-detail { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .pdf-cr-lore { font-size: 0.85rem; color: var(--ink); }
+
+  /* ── Weapons ────────────────────────────────────────────────── */
+  .pdf-weapon {
+    border-left: 3px solid var(--gold);
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.8rem;
+    background: var(--parchment-dark);
+    border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+  .pdf-wp-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+  }
+  .pdf-wp-type {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-left: 0.5rem;
+    font-weight: 400;
+    font-family: 'EB Garamond', serif;
+  }
+  .pdf-wp-power {
+    font-size: 0.7rem;
+    background: var(--gold);
+    color: white;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 0.5rem;
+    font-family: 'Cinzel', serif;
+    vertical-align: middle;
+  }
+  .pdf-wp-detail { font-size: 0.88rem; color: var(--ink); margin-top: 0.3rem; }
+
+  /* ── Story ──────────────────────────────────────────────────── */
+  .pdf-story-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.1rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  .pdf-story-content {
+    white-space: pre-line;
+    line-height: 1.9;
+    text-align: justify;
+    color: var(--ink);
+    font-size: 10.5pt;
+  }
+  .pdf-dialogue {
+    padding: 0.4rem 1rem;
+    border-left: 2px solid var(--border);
+    margin: 0.4rem 0;
+    font-style: italic;
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+  .pdf-speaker { font-style: normal; font-weight: 700; color: var(--gold); }
+  .pdf-quest {
+    background: var(--parchment-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
+    page-break-inside: avoid;
+  }
+  .pdf-q-title { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--dark); font-weight: 700; margin-bottom: 0.3rem; }
+  .pdf-q-desc { font-size: 0.88rem; margin-bottom: 0.3rem; }
+  .pdf-q-reward { font-size: 0.8rem; color: var(--gold); font-style: italic; }
+
+  /* ── Events ─────────────────────────────────────────────────── */
+  .pdf-event {
+    padding: 0.6rem 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 0.9rem;
+  }
+  .pdf-ev-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--crimson);
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-right: 0.4rem;
+  }
+  .pdf-ev-title { font-weight: 700; color: var(--dark); }
+  .pdf-ev-kingdom { color: var(--muted); font-size: 0.8rem; }
+
+  /* ── Footer ─────────────────────────────────────────────────── */
+  .pdf-footer {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0.5;
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 0.5px solid var(--border);
+  }
+
+  /* ── Print Rules ────────────────────────────────────────────── */
+  @media print {
+    @page {
+      size: A4;
+      margin: 0;
+    }
+    body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .cover { min-height: 100vh; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ COVER PAGE ═══════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-border"></div>
+  <div class="cover-rune">⚔ ✦ ⚔</div>
+  <div class="cover-title">${esc(w.world_name||'Unknown World')}</div>
+  <div class="cover-tagline">${esc(w.tagline||'A world of legend and shadow')}</div>
+  <div class="cover-divider"></div>
+  <div class="cover-meta-grid">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Genre</div>
+      <div class="cover-meta-value">${esc(w.genre||'Fantasy')}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Magic Level</div>
+      <div class="cover-meta-value">${esc(w.magic_level||'High')}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Story Tone</div>
+      <div class="cover-meta-value">${esc(w.story_tone||'Epic')}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Kingdoms</div>
+      <div class="cover-meta-value">${(w.kingdoms||[]).length}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Characters</div>
+      <div class="cover-meta-value">${(w.characters||[]).length}</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Creatures</div>
+      <div class="cover-meta-value">${(w.creatures||[]).length}</div>
+    </div>
+  </div>
+  <div class="cover-divider"></div>
+  <div class="cover-worldforge">WorldForge AI — Story World Generator</div>
+  <div class="cover-date">Generated ${now}</div>
+</div>
+
+<!-- ═══ WORLD OVERVIEW ═══════════════════════════════════════════════ -->
+<div class="page chapter">
+  <div class="section-head">🌍 World Overview</div>
+
+  <div class="info-block">
+    <div class="info-label">Description</div>
+    <div class="info-text">${esc(w.description||'')}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-label">Ancient Lore</div>
+    <div class="info-text">${esc(w.lore||'')}</div>
+  </div>
+  <div class="info-block">
+    <div class="info-label">History</div>
+    <div class="info-text">${esc(w.history||'')}</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+    <div class="info-block">
+      <div class="info-label">Magic System</div>
+      <div class="info-text">${esc(w.magic_system||'')}</div>
+    </div>
+    <div class="info-block">
+      <div class="info-label">Political System</div>
+      <div class="info-text">${esc(w.political_system||'')}</div>
+    </div>
+    <div class="info-block">
+      <div class="info-label">Economy</div>
+      <div class="info-text">${esc(w.economy||'')}</div>
+    </div>
+    <div class="info-block">
+      <div class="info-label">Religion</div>
+      <div class="info-text">${esc(w.religion||'')}</div>
+    </div>
+  </div>
+
+  ${rulesHtml ? `<div class="sub-head">Laws of This World</div><div>${rulesHtml}</div>` : ''}
+  ${timelineHtml ? `<div class="sub-head">Historical Timeline</div><div class="pdf-timeline">${timelineHtml}</div>` : ''}
+</div>
+
+<!-- ═══ WORLD MAP ════════════════════════════════════════════════════ -->
+${mapSvg ? `<div class="page chapter">
+  <div class="section-head">🗺 World Map</div>
+  <div class="pdf-map">${mapSvg}</div>
+</div>` : ''}
+
+<!-- ═══ KINGDOMS ════════════════════════════════════════════════════ -->
+${kingdomsHtml ? `<div class="page chapter">
+  <div class="section-head">🏰 Kingdoms &amp; Realms</div>
+  ${kingdomsHtml}
+</div>` : ''}
+
+<!-- ═══ CHARACTERS ═══════════════════════════════════════════════════ -->
+${charsHtml ? `<div class="page chapter">
+  <div class="section-head">⚔ Characters</div>
+  ${charsHtml}
+</div>` : ''}
+
+<!-- ═══ CREATURES & WEAPONS ══════════════════════════════════════════ -->
+<div class="page chapter">
+  ${creaturesHtml ? `<div class="section-head">🐉 Creatures &amp; Beasts</div>${creaturesHtml}` : ''}
+  ${weaponsHtml ? `<div class="section-head" style="margin-top:2rem">⚒ Legendary Weapons</div>${weaponsHtml}` : ''}
+</div>
+
+<!-- ═══ OPENING CHAPTER ══════════════════════════════════════════════ -->
+${story.content ? `<div class="page chapter">
+  <div class="section-head">📖 Opening Chapter</div>
+  <div class="pdf-story-title">${esc(story.chapter_title||'Chapter 1')}</div>
+  <div class="pdf-story-content">${esc(story.content||'')}</div>
+  ${dialoguesHtml ? `<div class="sub-head">Dialogues</div>${dialoguesHtml}` : ''}
+  ${questsHtml ? `<div class="sub-head">Quests</div>${questsHtml}` : ''}
+  ${story.plot_twist ? `<div class="sub-head">Plot Twist</div><div style="font-style:italic;color:var(--crimson);padding:0.5rem 1rem;border-left:3px solid var(--crimson)">${esc(story.plot_twist)}</div>` : ''}
+</div>` : ''}
+
+<!-- ═══ DYNAMIC EVENTS ═══════════════════════════════════════════════ -->
+${eventsHtml ? `<div class="page chapter">
+  <div class="section-head">⚡ Current World Events</div>
+  ${eventsHtml}
+</div>` : ''}
+
+<!-- ═══ FOOTER ═══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="pdf-footer">
+    ⚔ &nbsp; ${esc(w.world_name||'')} &nbsp; · &nbsp; WorldForge AI &nbsp; · &nbsp; Generated ${now} &nbsp; ⚔
+  </div>
+</div>
+
+<!-- ── Auto-print on load ──────────────────────────────────────────── -->
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 600);
+  });
+<\/script>
+</body>
+</html>`;
+
+  // Open in new window and trigger print
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) {
+    showToast('⚠ Allow pop-ups to export PDF');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  showToast('✦ PDF export ready — use "Save as PDF" in the print dialog');
+}
+
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+function loadProfile() {
+  if (currentUser) {
+    document.getElementById('profile-username').value = currentUser.username;
+    document.getElementById('profile-email').value    = currentUser.email;
+  }
+}
+async function saveProfile() {
+  const bio = document.getElementById('profile-bio').value;
+  await fetch('/api/dashboard/profile', {
+    method:  'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ bio })
+  });
+  showToast('✦ Profile updated!');
+}
+
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function timeAgo(dt) {
+  if (!dt) return '';
+  const diff = (Date.now() - new Date(dt).getTime()) / 1000;
+  if (diff < 60)    return 'just now';
+  if (diff < 3600)  return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+window.showSection  = showSection;
+window.generateWorld = generateWorld;
+window.switchTab    = switchTab;
+window.continueStory = continueStory;
+window.loadWorldDetail = loadWorldDetail;
+window.deleteWorld  = deleteWorld;
+window.togglePublic = togglePublic;
+window.shareWorld   = shareWorld;
+window.resetGenerator = resetGenerator;
+window.downloadMap  = downloadMap;
+window.exportWorldPDF = exportWorldPDF;
+window.saveProfile  = saveProfile;
+</script>
+</body>
+</html>

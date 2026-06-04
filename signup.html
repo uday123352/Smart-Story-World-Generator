@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Create Account — WorldForge AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+<style>
+  .auth-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 70% 40%, rgba(107,33,168,0.14), transparent),
+      radial-gradient(ellipse 60% 60% at 20% 60%, rgba(8,145,178,0.10), transparent),
+      radial-gradient(ellipse 50% 50% at 50% 90%, rgba(139,26,26,0.08), transparent),
+      var(--bg-void);
+  }
+  .strength-bar { display:flex; gap:4px; margin-top:8px; }
+  .strength-seg { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,0.08); transition:background 0.3s; }
+  .strength-seg.weak   { background: #e05555; }
+  .strength-seg.fair   { background: var(--gold); }
+  .strength-seg.strong { background: #28c840; }
+  .strength-label { font-size:0.75rem; color:var(--text-muted); margin-top:4px; }
+  .rune { position:absolute; font-size:1.5rem; color:rgba(107,33,168,0.08); animation:runeFloat linear infinite; user-select:none; }
+  @keyframes runeFloat {
+    0%   { transform:translateY(100vh) rotate(0deg);   opacity:0; }
+    10%  { opacity:1; }
+    90%  { opacity:1; }
+    100% { transform:translateY(-20vh) rotate(360deg); opacity:0; }
+  }
+  .terms-text { font-size:0.78rem; color:var(--text-muted); text-align:center; margin-top:1.25rem; line-height:1.5; }
+  .terms-text a { color:var(--gold); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<canvas id="particles-canvas"></canvas>
+<div class="auth-bg"></div>
+<div id="runes-container" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;"></div>
+
+<!-- Header -->
+<header id="main-header">
+  <nav class="nav-container">
+    <a href="/" class="logo">
+      <span class="logo-icon">⚔</span>
+      <span class="logo-text">WorldForge<span class="logo-ai">AI</span></span>
+    </a>
+    <div class="nav-cta">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <span class="toggle-icon">☀</span>
+        <span class="toggle-label">Light</span>
+      </button>
+      <a href="/login" class="btn-ghost">Login</a>
+    </div>
+  </nav>
+</header>
+
+<!-- Signup Card -->
+<main class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div style="font-size:2.5rem">🌍</div>
+    </div>
+    <h1 class="auth-title">Join the Realm</h1>
+    <p class="auth-sub">Create your account and start forging worlds.</p>
+
+    <ul class="errors-list" id="errors-list"></ul>
+
+    <form id="signup-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input type="text" id="username" name="username" class="form-input"
+               placeholder="archmage_eldar" autocomplete="username"
+               maxlength="20" required/>
+        <div class="form-error" id="username-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-input"
+               placeholder="you@realm.com" autocomplete="email" required/>
+        <div class="form-error" id="email-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-input"
+               placeholder="Min. 8 characters" autocomplete="new-password"
+               minlength="8" required/>
+        <div class="strength-bar" id="strength-bar">
+          <div class="strength-seg" id="seg1"></div>
+          <div class="strength-seg" id="seg2"></div>
+          <div class="strength-seg" id="seg3"></div>
+          <div class="strength-seg" id="seg4"></div>
+        </div>
+        <div class="strength-label" id="strength-label"></div>
+        <div class="form-error" id="password-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="confirm_password">Confirm Password</label>
+        <input type="password" id="confirm_password" name="confirm_password"
+               class="form-input" placeholder="Repeat password"
+               autocomplete="new-password" required/>
+        <div class="form-error" id="confirm-error"></div>
+      </div>
+
+      <button type="submit" class="btn-auth" id="signup-btn">
+        ⚔ Forge My Account
+      </button>
+    </form>
+
+    <p class="terms-text">
+      By signing up you agree to our
+      <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+    </p>
+
+    <div class="auth-divider">✦ already have an account? ✦</div>
+    <div class="auth-switch">
+      <a href="/login">Login here →</a>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+// ── Floating runes ────────────────────────────────────────────────────────────
+(function() {
+  const runes = ['ᚠ','ᚢ','ᚦ','ᚨ','ᚱ','ᚲ','ᚷ','ᚹ','ᚺ','ᚾ','ᛁ','ᛃ','ᛇ','ᛈ','ᛉ','ᛊ','ᛏ','ᛒ','ᛖ','ᛗ'];
+  const c = document.getElementById('runes-container');
+  for (let i = 0; i < 22; i++) {
+    const el = document.createElement('div');
+    el.className = 'rune';
+    el.textContent = runes[Math.floor(Math.random() * runes.length)];
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.animationDuration = (12 + Math.random() * 18) + 's';
+    el.style.animationDelay   = -(Math.random() * 18) + 's';
+    el.style.fontSize = (0.8 + Math.random() * 2.2) + 'rem';
+    c.appendChild(el);
+  }
+})();
+
+// ── Password strength ─────────────────────────────────────────────────────────
+document.getElementById('password').addEventListener('input', function() {
+  const val  = this.value;
+  const segs = [document.getElementById('seg1'), document.getElementById('seg2'),
+                document.getElementById('seg3'), document.getElementById('seg4')];
+  const lbl  = document.getElementById('strength-label');
+
+  segs.forEach(s => { s.className = 'strength-seg'; });
+
+  let score = 0;
+  if (val.length >= 8)              score++;
+  if (/[A-Z]/.test(val))            score++;
+  if (/[0-9]/.test(val))            score++;
+  if (/[^A-Za-z0-9]/.test(val))     score++;
+
+  const cls   = score <= 1 ? 'weak' : score <= 2 ? 'fair' : 'strong';
+  const label = score <= 1 ? '⚠ Weak' : score <= 2 ? '◈ Fair' : score <= 3 ? '✦ Strong' : '✦ Unbreakable';
+  for (let i = 0; i < score; i++) segs[i].classList.add(cls);
+  lbl.textContent = val ? label : '';
+});
+
+// ── Signup Form ───────────────────────────────────────────────────────────────
+document.getElementById('signup-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const username  = document.getElementById('username').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const password  = document.getElementById('password').value;
+  const confirm   = document.getElementById('confirm_password').value;
+  const btn       = document.getElementById('signup-btn');
+  const errList   = document.getElementById('errors-list');
+
+  // Clear errors
+  errList.innerHTML = ''; errList.classList.remove('visible');
+  document.querySelectorAll('.form-input').forEach(i => i.classList.remove('error'));
+  document.querySelectorAll('.form-error').forEach(i => { i.textContent=''; i.classList.remove('visible'); });
+
+  // Client validation
+  let valid = true;
+
+  if (!username || !/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    setFieldError('username', 'username-error', '3–20 letters, numbers or underscores.');
+    valid = false;
+  }
+  if (!email || !/^[\w\.-]+@[\w\.-]+\.\w{2,}$/.test(email)) {
+    setFieldError('email', 'email-error', 'Enter a valid email address.');
+    valid = false;
+  }
+  if (password.length < 8) {
+    setFieldError('password', 'password-error', 'Password must be at least 8 characters.');
+    valid = false;
+  }
+  if (password !== confirm) {
+    setFieldError('confirm_password', 'confirm-error', 'Passwords do not match.');
+    valid = false;
+  }
+  if (!valid) return;
+
+  // Submit
+  btn.disabled = true;
+  btn.textContent = 'Forging your destiny...';
+  btn.classList.add('btn-auth-loading');
+
+  try {
+    const r = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, confirm_password: confirm })
+    });
+    const d = await r.json();
+
+    if (d.success) {
+      showToast('✦ Account forged! Welcome, ' + d.user.username + '!');
+      if (typeof clearAuthCache === 'function') clearAuthCache();
+      setTimeout(() => window.location.href = '/dashboard', 900);
+    } else {
+      errList.innerHTML = (d.errors || ['Signup failed.']).map(e => `<li>${e}</li>`).join('');
+      errList.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = '⚔ Forge My Account';
+      btn.classList.remove('btn-auth-loading');
+    }
+  } catch {
+    errList.innerHTML = '<li>Server error. Please try again.</li>';
+    errList.classList.add('visible');
+    btn.disabled = false;
+    btn.textContent = '⚔ Forge My Account';
+    btn.classList.remove('btn-auth-loading');
+  }
+});
+
+function setFieldError(inputId, errorId, msg) {
+  document.getElementById(inputId).classList.add('error');
+  const el = document.getElementById(errorId);
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+// Redirect if already logged in — reuses the cached fetch from app.js (no double call)
+(async function() {
+  if (typeof redirectIfAuthenticated === 'function') {
+    await redirectIfAuthenticated('/dashboard');
+  }
+})();
+</script>
+</body>
+</html>
